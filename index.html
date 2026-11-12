@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configurador Paramétrico: Laminadora PET v2.0</title>
+    <title>Configurador Paramétrico: Laminadora v10.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -35,7 +35,8 @@
         .btn-secondary:hover { background: #334155; }
         
         .custom-input { background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; padding: 0.5rem; border-radius: 6px; width: 100%; text-align: left; font-size: 0.9rem; margin-top: 0.5rem; outline: none;}
-        .input-fuerza { background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; font-size: 1.25rem; font-weight: bold; padding: 0.5rem; border-radius: 6px; width: 100px; text-align: center;}
+        .input-fuerza { background: #0f172a; border: 1px solid #38bdf8; color: #38bdf8; font-size: 1.25rem; font-weight: bold; padding: 0.5rem; border-radius: 6px; width: 90px; text-align: center; outline: none;}
+        .select-fuerza { background: #1e293b; border: 1px solid #38bdf8; color: #38bdf8; font-size: 1rem; font-weight: bold; padding: 0.5rem; border-radius: 6px; outline: none; cursor: pointer;}
 
         #result-modal {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85);
@@ -55,6 +56,7 @@
         
         .math-panel { background: rgba(15, 23, 42, 0.8); border: 1px solid #0284c7; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; font-family: monospace; color: #bae6fd; font-size: 0.85rem;}
         .math-title { color: #38bdf8; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 1px;}
+        .math-explanation { font-family: 'Inter', sans-serif; color: #bae6fd; opacity: 0.9; font-size: 0.8rem; margin-top: 0.5rem; border-top: 1px solid rgba(2, 132, 199, 0.4); padding-top: 0.5rem;}
     </style>
 </head>
 <body>
@@ -69,7 +71,7 @@
     <div id="ui-container">
         <div class="header">
             <h1 class="text-xl font-bold text-white">Ingeniería Paramétrica</h1>
-            <p class="text-sm text-slate-400" id="step-indicator">Paso 1 de 4: Parámetros Base</p>
+            <p class="text-sm text-slate-400" id="step-indicator">Paso 1 de 5: Operación</p>
         </div>
         
         <div class="step-content" id="step-panel" oninput="checkValid()"></div>
@@ -83,14 +85,20 @@
 
 <div id="result-modal">
     <div class="modal-box">
-        <div class="text-center mb-6">
+        <div class="text-center mb-4">
             <i id="result-icon" class="fa-solid fa-check-circle text-6xl mb-4 text-emerald-400"></i>
             <h2 id="result-title" class="text-3xl font-bold mb-2">Estado</h2>
-            <p id="result-msg" class="text-slate-300 text-lg">Mensaje de diagnóstico.</p>
+            <p id="result-msg" class="text-slate-300 text-lg mb-4">Mensaje de diagnóstico.</p>
         </div>
         
-        <div id="calc-report" class="bg-slate-900 rounded p-4 font-mono text-sm text-sky-300 mb-6 whitespace-pre-line border border-slate-700 max-h-64 overflow-y-auto">
-            Cálculos...
+        <div id="result-equation" class="hidden bg-red-900/30 border border-red-500/50 rounded p-3 mb-4 text-red-400 text-base font-mono text-center font-bold">
+        </div>
+        
+        <div id="result-suggestion" class="hidden bg-amber-900/40 border border-amber-500 rounded p-4 mb-4 text-amber-200 text-sm font-semibold">
+        </div>
+
+        <div id="calc-report" class="bg-slate-900 rounded p-4 font-mono text-sm text-sky-300 mb-6 whitespace-pre-line border border-slate-700 max-h-48 overflow-y-auto">
+            Datos obtenidos...
         </div>
 
         <div class="flex gap-4">
@@ -104,6 +112,8 @@
     const state = {
         step: 1,
         fuerza: 450,
+        fuerzaUnit: 'N',
+        gap: 12, 
         selections: { roller: null, shaft: null, shaftMat: null, bearing: null, motor: null, trans: null },
         customs: { shaft_d: '', shaft_sy: '', bearing_d: '', bearing_c0: '', motor_hp: '', trans_t: '' },
         camZoom: 1, camTargetZoom: 1, camPanX: 0, camTargetPanX: 0, camPanY: 0, camTargetPanY: 0,
@@ -112,43 +122,63 @@
 
     const catalog = {
         rollers: [
-            { id: 4, title: 'Rodillo 4" (101.6mm)', desc: 'Pequeño. Ángulo de ataque agudo.', icon: 'fa-circle-notch' },
+            { id: 2, title: 'Rodillo 2" (50.8mm)', desc: 'Extra pequeño.', icon: 'fa-circle-notch' },
+            { id: 4, title: 'Rodillo 4" (101.6mm)', desc: 'Pequeño.', icon: 'fa-circle-notch' },
             { id: 6, title: 'Rodillo 6" (152.4mm)', desc: 'Estándar industrial.', icon: 'fa-circle' },
-            { id: 8, title: 'Rodillo 8" (203.2mm)', desc: 'Masivo. Excelente agarre.', icon: 'fa-compact-disc' }
+            { id: 8, title: 'Rodillo 8" (203.2mm)', desc: 'Grande. Excelente agarre.', icon: 'fa-compact-disc' },
+            { id: 10, title: 'Rodillo 10" (254.0mm)', desc: 'Masivo. Uso pesado.', icon: 'fa-compact-disc' }
         ],
         shafts: [
+            { id: 15, title: 'Flecha Ø15 mm', desc: 'Extra ligera.', icon: 'fa-minus' },
             { id: 20, title: 'Flecha Ø20 mm', desc: 'Ligera.', icon: 'fa-minus' },
             { id: 25, title: 'Flecha Ø25 mm', desc: 'Estándar.', icon: 'fa-minus' },
             { id: 35, title: 'Flecha Ø35 mm', desc: 'Robusta.', icon: 'fa-equals' },
-            { id: 50, title: 'Flecha Ø50 mm', desc: 'Uso Extremo.', icon: 'fa-bars' },
+            { id: 50, title: 'Flecha Ø50 mm', desc: 'Pesada.', icon: 'fa-bars' },
+            { id: 60, title: 'Flecha Ø60 mm', desc: 'Uso Extremo.', icon: 'fa-bars' },
             { id: 'custom', title: 'Medida Personalizada', desc: 'Ingresa diámetro de catálogo externo', icon: 'fa-pen' }
         ],
         materials: [
+            { id: 170, title: 'Acero 1010 (Sy: 170 MPa)' },
             { id: 185, title: 'Acero 1018 (Sy: 185 MPa)' },
+            { id: 205, title: 'Acero Inox 304 (Sy: 205 MPa)' },
             { id: 310, title: 'Acero 1045 (Sy: 310 MPa)' },
             { id: 415, title: 'Acero 4140 (Sy: 415 MPa)' },
+            { id: 700, title: 'Acero 4340 Tratado (Sy: 700 MPa)' },
+            { id: 850, title: 'Acero 4340 Templado (Sy: 850 MPa)' },
             { id: 'custom', title: 'Aleación Personalizada' }
         ],
         skfBearings: [
+            { id: '22202 E', d: 15, C0: 15000, title: 'SKF 22202 E', desc: 'Carga Estática (C0): 15 kN' },
             { id: '22204 E', d: 20, C0: 40000, title: 'SKF 22204 E', desc: 'Carga Estática (C0): 40 kN' },
             { id: '22205 E', d: 25, C0: 48000, title: 'SKF 22205 E', desc: 'Carga Estática (C0): 48 kN' },
             { id: '22305 E', d: 25, C0: 78000, title: 'SKF 22305 E (Pesada)', desc: 'Carga Estática (C0): 78 kN' },
             { id: '22207 E', d: 35, C0: 85000, title: 'SKF 22207 E', desc: 'Carga Estática (C0): 85 kN' },
             { id: '22307 E', d: 35, C0: 129000, title: 'SKF 22307 E (Pesada)', desc: 'Carga Estática (C0): 129 kN' },
             { id: '22210 E', d: 50, C0: 108000, title: 'SKF 22210 E', desc: 'Carga Estática (C0): 108 kN' },
+            { id: '22310 E', d: 50, C0: 160000, title: 'SKF 22310 E (Pesada)', desc: 'Carga Estática (C0): 160 kN' },
+            { id: '22212 E', d: 60, C0: 140000, title: 'SKF 22212 E', desc: 'Carga Estática (C0): 140 kN' },
+            { id: '22312 E', d: 60, C0: 210000, title: 'SKF 22312 E (Pesada)', desc: 'Carga Estática (C0): 210 kN' },
             { id: 'custom', d: 'any', C0: 0, title: 'Rodamiento Autoalineable Personalizado', desc: 'Especifica diámetro y carga estática.' }
         ],
         motors: [
+            { id: 0.25, title: 'Motorreductor 0.25 HP' },
             { id: 0.5, title: 'Motorreductor 0.5 HP' },
             { id: 2.0, title: 'Motorreductor 2.0 HP' },
             { id: 5.0, title: 'Motorreductor 5.0 HP' },
+            { id: 10.0, title: 'Motorreductor 10.0 HP' },
+            { id: 15.0, title: 'Motorreductor 15.0 HP' },
             { id: 'custom', title: 'Potencia Personalizada' }
         ],
         transmissions: [
-            { id: 'gear_1020', maxTorque: 50, title: 'Engranes Acero 1020', desc: 'Max Torque: 50 N·m' },
-            { id: 'gates_8mgt', maxTorque: 120, title: 'Banda Gates PowerGrip', desc: 'Max Torque: 120 N·m' },
-            { id: 'renold_16b', maxTorque: 300, title: 'Cadena Renold 16B-1', desc: 'Max Torque: 300 N·m' },
-            { id: 'custom', maxTorque: 0, title: 'Transmisión Personalizada', desc: 'Especifica torque de fractura.' }
+            { id: 'gear_1020', maxTorque: 50, title: 'Engranes Acero 1020', desc: 'Par Máximo: 50 N·m' },
+            { id: 'gates_5mgt', maxTorque: 40, title: 'Banda Gates 5MGT', desc: 'Par Máximo: 40 N·m' },
+            { id: 'gates_8mgt', maxTorque: 120, title: 'Banda Gates 8MGT', desc: 'Par Máximo: 120 N·m' },
+            { id: 'renold_16b', maxTorque: 300, title: 'Cadena Renold 16B-1 (Simplex)', desc: 'Par Máximo: 300 N·m' },
+            { id: 'renold_24b', maxTorque: 800, title: 'Cadena Renold 24B-1 (Simplex)', desc: 'Par Máximo: 800 N·m' },
+            { id: 'renold_32b', maxTorque: 1500, title: 'Cadena Renold 32B-1 (Simplex)', desc: 'Par Máximo: 1500 N·m' },
+            { id: 'renold_24b2', maxTorque: 1600, title: 'Cadena Renold 24B-2 (Dúplex)', desc: 'Par Máximo: 1600 N·m' },
+            { id: 'renold_32b3', maxTorque: 4500, title: 'Cadena Renold 32B-3 (Triplex)', desc: 'Par Máximo: 4500 N·m' },
+            { id: 'custom', maxTorque: 0, title: 'Transmisión Personalizada', desc: 'Especifica par de fractura.' }
         ]
     };
 
@@ -163,6 +193,13 @@
     function resize() { canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight; }
     window.addEventListener('resize', resize); resize();
 
+    function getFuerzaN() {
+        let f = parseFloat(state.fuerza);
+        if (state.fuerzaUnit === 'kgf') return f * 9.80665;
+        if (state.fuerzaUnit === 'lbf') return f * 4.44822;
+        return f;
+    }
+
     function getVal(type) {
         if (type === 'shaft_d') return state.selections.shaft === 'custom' ? parseFloat(state.customs.shaft_d) : parseFloat(state.selections.shaft);
         if (type === 'shaft_sy') return state.selections.shaftMat === 'custom' ? parseFloat(state.customs.shaft_sy) : parseFloat(state.selections.shaftMat);
@@ -174,12 +211,14 @@
     function checkValid() {
         let valid = false;
         if (state.step === 1) {
-            valid = state.selections.roller !== null && state.fuerza > 0;
+            valid = state.fuerza > 0 && state.gap >= 0;
         } else if (state.step === 2) {
+            valid = state.selections.roller !== null;
+        } else if (state.step === 3) {
             let d_ok = state.selections.shaft !== null && (state.selections.shaft !== 'custom' || state.customs.shaft_d > 0);
             let mat_ok = state.selections.shaftMat !== null && (state.selections.shaftMat !== 'custom' || state.customs.shaft_sy > 0);
             valid = d_ok && mat_ok;
-        } else if (state.step === 3) {
+        } else if (state.step === 4) {
             if (state.selections.bearing === null) {
                 valid = false;
             } else if (state.selections.bearing === 'custom') {
@@ -188,7 +227,7 @@
                 let errorDiv = document.getElementById('bearing-error');
                 if (bearD !== shaftD && !isNaN(bearD)) {
                     if(errorDiv) {
-                        errorDiv.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> Falla Cinemática: El diámetro interior (${bearD} mm) no encaja en la flecha (${shaftD} mm).`;
+                        errorDiv.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> <strong>Error de Ensamble:</strong> El diámetro interior (${bearD} mm) no encaja en la flecha (${shaftD} mm).`;
                         errorDiv.classList.remove('hidden');
                     }
                     valid = false;
@@ -199,7 +238,7 @@
             } else {
                 valid = true;
             }
-        } else if (state.step === 4) {
+        } else if (state.step === 5) {
             let m_ok = state.selections.motor !== null && (state.selections.motor !== 'custom' || state.customs.motor_hp > 0);
             let t_ok = state.selections.trans !== null && (state.selections.trans !== 'custom' || state.customs.trans_t > 0);
             valid = m_ok && t_ok;
@@ -212,27 +251,69 @@
         btnPrev.style.visibility = state.step > 1 ? 'visible' : 'hidden';
         btnNext.disabled = true; 
         
+        const f_N = getFuerzaN();
+        const rodillo_D = state.selections.roller || 6; 
+        const D_rodillo_m = (rodillo_D * 25.4) / 1000;
+        const T_req = f_N * (D_rodillo_m / 2);
+
         if (state.step === 1) {
-            stepInd.innerText = "Paso 1 de 4: Carga y Rodillos";
+            stepInd.innerText = "Paso 1 de 5: Operación";
+            btnNext.innerText = "Siguiente";
+            hud.innerText = "CAM: WIDE | FOCUS: MATERIAL";
+            
+            const unitN = state.fuerzaUnit === 'N' ? 'selected' : '';
+            const unitKgf = state.fuerzaUnit === 'kgf' ? 'selected' : '';
+            const unitLbf = state.fuerzaUnit === 'lbf' ? 'selected' : '';
+
+            panel.innerHTML = `
+                <div class="math-panel">
+                    <div class="math-title">Parámetros Físicos</div>
+                    Ingresa los datos obtenidos en las pruebas de resistencia del material a laminar.
+                </div>
+                
+                <h3 class="mb-4 text-sky-400 font-semibold"><i class="fa-solid fa-sliders mr-2"></i>Condiciones de Operación</h3>
+                <div class="bg-slate-800/80 p-4 rounded-lg border border-slate-700 mb-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <div class="text-sm font-semibold text-slate-200">Fuerza del Material (f)</div>
+                            <div class="text-xs text-slate-400">Resistencia al aplastamiento</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="fuerzaInput" class="input-fuerza" value="${state.fuerza}" onchange="state.fuerza = this.value; checkValid()">
+                            <select id="fuerzaUnit" class="select-fuerza" onchange="state.fuerzaUnit = this.value; checkValid()">
+                                <option value="N" ${unitN}>N</option>
+                                <option value="kgf" ${unitKgf}>kgf</option>
+                                <option value="lbf" ${unitLbf}>lbf</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="text-sm font-semibold text-slate-200">Separación entre Ejes (L)</div>
+                            <div class="text-xs text-slate-400">Espacio de salida deseado</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="gapInput" class="input-fuerza" value="${state.gap}" onchange="state.gap = this.value; checkValid()">
+                            <span class="text-sky-400 font-bold w-12 text-center">mm</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            setCamera(1.2, 0, 0); 
+            
+        } else if (state.step === 2) {
+            stepInd.innerText = "Paso 2 de 5: Rodillos";
             btnNext.innerText = "Siguiente";
             hud.innerText = "CAM: WIDE | FOCUS: ZONA DE APLASTAMIENTO";
             
             panel.innerHTML = `
                 <div class="math-panel">
                     <div class="math-title">Ecuación Cinemática</div>
-                    Torque Requerido (T) = F × r
+                    Par de Torsión Requerido (T) = F × r
+                    <div class="math-explanation"><i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i> En palabras simples: ¿Cuánta fuerza rotativa requiere el sistema para aplastar el material con el rodillo elegido?</div>
                 </div>
-                <div class="flex justify-between items-center bg-slate-800 p-4 rounded-lg mb-6 border border-slate-700">
-                    <div>
-                        <div class="text-sm text-slate-400">Fuerza Objeto (f)</div>
-                        <div class="text-xs text-slate-500">Newtons</div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <input type="number" id="fuerzaInput" class="input-fuerza" value="${state.fuerza}" onchange="state.fuerza = this.value; checkValid()">
-                        <span class="text-sky-400 font-bold">N</span>
-                    </div>
-                </div>
-                <h3 class="mb-4 text-sky-400 font-semibold">Diámetro del Rodillo (D)</h3>
+                <h3 class="mb-4 text-sky-400 font-semibold"><i class="fa-solid fa-gear mr-2"></i>Selección de Rodillos (Diámetro D)</h3>
             `;
             catalog.rollers.forEach(opt => {
                 const isSelected = state.selections.roller === opt.id;
@@ -244,19 +325,27 @@
             });
             setCamera(1.5, 0, 0); 
             
-        } else if (state.step === 2) {
-            stepInd.innerText = "Paso 2 de 4: Flecha y Material";
+        } else if (state.step === 3) {
+            stepInd.innerText = "Paso 3 de 5: Flecha y Material";
             hud.innerText = "CAM: ZOOM IN | FOCUS: CENTRO DE FLECHA";
             
+            const validShafts = catalog.shafts.filter(opt => {
+                if (opt.id === 'custom') return true;
+                if (f_N < 2000) return opt.id <= 25;
+                if (f_N >= 2000 && f_N < 10000) return opt.id >= 25 && opt.id <= 35;
+                return opt.id >= 35;
+            });
+
             panel.innerHTML = `
                 <div class="math-panel">
                     <div class="math-title">Código ASME (Eje Sólido)</div>
                     τ_max = (16 / πd³) * √((Kb·Mb)² + (Kt·Mt)²) <br>
                     <span class="text-xs text-slate-400 mt-2 block">El esfuerzo τ_max no debe superar la resistencia Sy del material.</span>
+                    <div class="math-explanation"><i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i> En palabras simples: ¿El grosor del eje y la resistencia del acero (Sy) soportarán la fuerza sin romperse como un lápiz?</div>
                 </div>
-                <h3 class="mb-4 text-sky-400 font-semibold">1. Diámetro de la Flecha (d)</h3>
+                <h3 class="mb-4 text-sky-400 font-semibold"><i class="fa-solid fa-ruler-horizontal mr-2"></i>1. Diámetro de la Flecha (d)</h3>
             `;
-            catalog.shafts.forEach(opt => {
+            validShafts.forEach(opt => {
                 const isSelected = state.selections.shaft === opt.id;
                 let html = `<div class="card-option py-3 ${isSelected ? 'selected' : ''}" onclick="selectOption('shaft', '${opt.id}')">
                         <i class="fa-solid ${opt.icon || 'fa-circle'} text-xl w-6 text-center text-slate-400"></i>
@@ -269,7 +358,7 @@
                 panel.innerHTML += html;
             });
 
-            panel.innerHTML += `<h3 class="mt-6 mb-4 text-sky-400 font-semibold">2. Material del Eje (Resistencia Sy)</h3>`;
+            panel.innerHTML += `<h3 class="mt-6 mb-4 text-sky-400 font-semibold"><i class="fa-solid fa-cubes mr-2"></i>2. Resistencia del Material</h3>`;
             catalog.materials.forEach(opt => {
                 const isSelected = state.selections.shaftMat === opt.id;
                 let html = `<div class="card-option py-2 ${isSelected ? 'selected' : ''}" onclick="selectOption('shaftMat', '${opt.id}')">
@@ -283,8 +372,8 @@
             
             setCamera(3.5, 0, 0);
 
-        } else if (state.step === 3) {
-            stepInd.innerText = "Paso 3 de 4: Apoyos";
+        } else if (state.step === 4) {
+            stepInd.innerText = "Paso 4 de 5: Apoyos";
             hud.innerText = "CAM: PAN RIGHT | FOCUS: EXTREMO DEL EJE";
             
             const shaftD = getVal('shaft_d');
@@ -292,14 +381,15 @@
 
             panel.innerHTML = `
                 <div class="math-panel">
-                    <div class="math-title">Evaluación de Apoyos</div>
-                    Reacción (R) = F_botella / 2 <br>
+                    <div class="math-title">Evaluación de Apoyos (Baleros)</div>
+                    Reacción (R) = F_objeto / 2 <br>
                     <span class="text-xs text-slate-400 mt-2 block">La reacción R no debe superar la Carga Estática C0.</span>
+                    <div class="math-explanation"><i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i> En palabras simples: ¿Los baleros soportarán la carga (C0) sin que sus rodillos internos se trituren por el peso?</div>
                 </div>
                 <div class="p-3 bg-amber-900/40 border border-amber-700 rounded-lg mb-4 text-xs text-amber-200">
-                    <i class="fa-solid fa-circle-info mr-1"></i><strong>Nota de Diseño:</strong> Se requieren rodamientos de rodillos a rótula (autoalineables) para absorber el pandeo de la flecha. Catálogo comercial filtrado para d = ${shaftD}mm.
+                    <i class="fa-solid fa-circle-info mr-1"></i><strong>Nota de Diseño:</strong> Se requieren rodamientos autoalineables para absorber la flexión de la flecha. Catálogo comercial filtrado para d = ${shaftD}mm.
                 </div>
-                <h3 class="mb-4 text-sky-400 font-semibold">Selecciona Rodamiento</h3>
+                <h3 class="mb-4 text-sky-400 font-semibold"><i class="fa-solid fa-ring mr-2"></i>Selecciona Rodamiento</h3>
             `;
             
             skfFiltrados.forEach(opt => {
@@ -322,19 +412,34 @@
             });
             setCamera(2.0, -100, 0);
 
-        } else if (state.step === 4) {
-            stepInd.innerText = "Paso 4 de 4: Potencia y Transmisión";
+        } else if (state.step === 5) {
+            stepInd.innerText = "Paso 5 de 5: Potencia y Transmisión";
             btnNext.innerText = "SIMULAR DISEÑO";
             hud.innerText = "CAM: WIDE | FOCUS: TREN CINEMÁTICO";
             
+            const validMotors = catalog.motors.filter(opt => {
+                if (opt.id === 'custom') return true;
+                if (T_req < 50) return opt.id <= 2.0;
+                if (T_req >= 50 && T_req < 400) return opt.id >= 0.5 && opt.id <= 5.0;
+                return opt.id >= 2.0;
+            });
+
+            const validTrans = catalog.transmissions.filter(opt => {
+                if (opt.id === 'custom') return true;
+                if (T_req < 100) return opt.maxTorque <= 300;
+                if (T_req >= 100 && T_req < 500) return opt.maxTorque >= 120 && opt.maxTorque <= 1500;
+                return opt.maxTorque >= 300; 
+            });
+
             panel.innerHTML = `
                 <div class="math-panel">
                     <div class="math-title">Potencia Motriz</div>
-                    T_motor = P (Watts) / ω (rad/s)
+                    T_motor = Potencia / Velocidad_Angular
+                    <div class="math-explanation"><i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i> En palabras simples: ¿El motor tiene la fuerza bruta necesaria para mover toda la máquina sin estancarse?</div>
                 </div>
-                <h3 class="mb-4 text-sky-400 font-semibold">1. Motorreductor</h3>
+                <h3 class="mb-4 text-sky-400 font-semibold"><i class="fa-solid fa-bolt mr-2"></i>1. Motorreductor</h3>
             `;
-            catalog.motors.forEach(opt => {
+            validMotors.forEach(opt => {
                 const isSelected = state.selections.motor === opt.id;
                 let html = `<div class="card-option py-2 ${isSelected ? 'selected' : ''}" onclick="selectOption('motor', '${opt.id}')">
                     <div class="w-full"><div class="text-sm font-bold text-white">${opt.title}</div>`;
@@ -345,15 +450,15 @@
                 panel.innerHTML += html;
             });
 
-            panel.innerHTML += `<h3 class="mt-6 mb-4 text-sky-400 font-semibold">2. Transmisión</h3>`;
-            catalog.transmissions.forEach(opt => {
+            panel.innerHTML += `<h3 class="mt-6 mb-4 text-sky-400 font-semibold"><i class="fa-solid fa-cogs mr-2"></i>2. Transmisión</h3>`;
+            validTrans.forEach(opt => {
                 const isSelected = state.selections.trans === opt.id;
                 let html = `<div class="card-option ${isSelected ? 'selected' : ''} flex-col items-start" onclick="selectOption('trans', '${opt.id}')">
                     <div class="w-full">
                         <div class="font-bold text-sm text-white">${opt.title}</div><div class="text-xs text-slate-400">${opt.desc}</div>
                     </div>`;
                 if (opt.id === 'custom' && isSelected) {
-                    html += `<div class="w-full"><input type="number" class="custom-input" placeholder="Torque de Fractura (N·m)" value="${state.customs.trans_t}" onchange="state.customs.trans_t = this.value; checkValid()" onclick="event.stopPropagation()"></div>`;
+                    html += `<div class="w-full"><input type="number" class="custom-input" placeholder="Par de Fractura (N·m)" value="${state.customs.trans_t}" onchange="state.customs.trans_t = this.value; checkValid()" onclick="event.stopPropagation()"></div>`;
                 }
                 html += `</div>`;
                 panel.innerHTML += html;
@@ -365,7 +470,6 @@
     }
 
     function selectOption(key, value) {
-        // Parsear a número si es posible y no es custom string
         let val = isNaN(value) || value === 'custom' || value === '' ? value : parseFloat(value);
         state.selections[key] = val;
         
@@ -380,7 +484,7 @@
     }
 
     btnNext.addEventListener('click', () => {
-        if (state.step < 4) { state.step++; renderStep(); } 
+        if (state.step < 5) { state.step++; renderStep(); } 
         else { runSimulation(); }
     });
 
@@ -389,37 +493,46 @@
     });
 
     function evaluateDesign() {
-        const F = parseFloat(state.fuerza);
+        const F_input = parseFloat(state.fuerza);
+        
+        let F = F_input;
+        let F_display = F_input.toFixed(1) + ' ' + state.fuerzaUnit;
+        if (state.fuerzaUnit === 'kgf') {
+            F = F_input * 9.80665;
+            F_display += ` (${F.toFixed(1)} N)`;
+        } else if (state.fuerzaUnit === 'lbf') {
+            F = F_input * 4.44822;
+            F_display += ` (${F.toFixed(1)} N)`;
+        }
+
         const rodillo_D = state.selections.roller;
         const D_rodillo_m = (rodillo_D * 25.4) / 1000;
         const d_flecha_m = getVal('shaft_d') / 1000;
         const Sy_MPa = getVal('shaft_sy');
         const motor_HP = getVal('motor_hp');
         const trans_max_T = getVal('trans_t');
-        const bearing_C0 = getVal('bearing_c0'); // in Newtons
+        const bearing_C0 = getVal('bearing_c0'); 
 
-        let report = `[REPORTE DE INGENIERÍA]\n`;
-        report += `Fuerza (f): ${F} N | Rodillo (D): ${rodillo_D}" | Flecha (d): ${getVal('shaft_d')} mm\n`;
+        let report = `[DATOS OBTENIDOS]\n`;
+        report += `Fuerza (f): ${F_display} | Rodillo (D): ${rodillo_D}" \n`;
+        report += `Separación (L): ${state.gap} mm | Flecha (d): ${getVal('shaft_d')} mm\n`;
         report += `────────────────────────────────────\n`;
 
-        // 1. Cinemática
-        if (rodillo_D === 4 && F > 100) {
-            return { ok: false, type: 'slip', report, msg: "Falla Cinemática: Diámetro del rodillo muy pequeño. La botella rebota." };
+        if (rodillo_D <= 4 && F > 150) {
+            return { ok: false, type: 'slip', report, msg: "Falla Cinemática: El rodillo es muy pequeño o están muy separados. El material no es atrapado y resbala.", suggestion: "💡 Sugerencia: Selecciona un diámetro de rodillo mayor (ej. 6\" u 8\") para mejorar el ángulo de ataque.", equation: `D_rodillo (${rodillo_D}") <= 4" && Fuerza (${F.toFixed(1)} N) > 150 N` };
         }
 
-        // 2. Torques
         const T_req = F * (D_rodillo_m / 2);
         const P_watts = motor_HP * 745.7;
         const w_rads = (30 * 2 * Math.PI) / 60;
         const T_motor = P_watts / w_rads;
 
-        report += `T_requerido: ${T_req.toFixed(1)} N·m | T_motor: ${T_motor.toFixed(1)} N·m\n`;
+        report += `Par requerido: ${T_req.toFixed(1)} N·m | Par motriz: ${T_motor.toFixed(1)} N·m\n`;
 
         if (T_motor < T_req) {
-            return { ok: false, type: 'stall', report, msg: `Falla Motriz: El motor de ${motor_HP} HP se estancó por falta de torque.` };
+            return { ok: false, type: 'stall', report, msg: `Falla Motriz: El motor se estancó porque no tiene la fuerza suficiente para girar bajo esa carga.`, suggestion: "💡 Sugerencia: Incrementa la potencia del motorreductor o disminuye el diámetro del rodillo.", equation: `T_motor (${T_motor.toFixed(1)} N·m) < T_requerido (${T_req.toFixed(1)} N·m)` };
         }
 
-        // 3. Ecuación ASME
         const M_b = (F * 0.2) / 4; 
         const K_b = 1.5; const K_t = 1.0; 
         
@@ -429,23 +542,21 @@
         report += `Esfuerzo ASME (τ): ${tau_max_MPa.toFixed(1)} MPa | Límite (Sy): ${Sy_MPa} MPa\n`;
 
         if (tau_max_MPa > Sy_MPa) {
-            return { ok: false, type: 'break', report, msg: `Falla Estructural: El esfuerzo torsor superó la resistencia del acero. Flecha degollada.` };
+            return { ok: false, type: 'break', report, msg: `Falla Estructural: El eje principal se rompió (degolló) porque el material no resistió la fuerza aplicada.`, suggestion: "💡 Sugerencia: Aumenta el grosor de la flecha o selecciona un acero más resistente.", equation: `τ_actual (${tau_max_MPa.toFixed(1)} MPa) > Sy_acero (${Sy_MPa} MPa)` };
         }
 
-        // 4. Transmisión
         if (T_motor > trans_max_T) {
-            return { ok: false, type: 'break', report, msg: `Falla de Transmisión: El elemento de transmisión no soportó el torque bruto del motor.` };
+            return { ok: false, type: 'break', report, msg: `Falla de Transmisión: El sistema de transmisión se reventó al no soportar la fuerza del motor.`, suggestion: "💡 Sugerencia: Cambia a una transmisión más robusta (como una cadena de rodillos de mayor paso) o reduce los HP del motor.", equation: `T_motor (${T_motor.toFixed(1)} N·m) > T_max_transmisión (${trans_max_T} N·m)` };
         }
 
-        // 5. Rodamientos
         const Reaccion_apoyo_N = F / 2;
         report += `Reacción (R): ${Reaccion_apoyo_N.toFixed(1)} N | Cap. SKF (C0): ${(bearing_C0).toFixed(1)} N\n`;
 
         if (Reaccion_apoyo_N > bearing_C0) {
-            return { ok: false, type: 'stall', report, msg: `Falla de Apoyos: La reacción de la carga destruyó los elementos rodantes del balero (Brinelling).` };
+            return { ok: false, type: 'stall', report, msg: `Falla de Apoyos: Las piezas internas del rodamiento se trituraron por el exceso de carga (Brinelling).`, suggestion: "💡 Sugerencia: Selecciona un rodamiento de la 'Serie Pesada' o aumenta el diámetro del eje para instalar rodamientos más grandes.", equation: `Reacción (${Reaccion_apoyo_N.toFixed(1)} N) > C0_rodamiento (${bearing_C0.toFixed(1)} N)` };
         }
 
-        return { ok: true, type: 'success', report, msg: "¡Diseño Validado por Ecuaciones de Diseño y Catálogos Comerciales! Excelente ensamble." };
+        return { ok: true, type: 'success', report, msg: "¡Diseño Validado! La máquina funcionará perfectamente y de manera segura.", suggestion: "" };
     }
 
     function runSimulation() {
@@ -457,19 +568,35 @@
         hud.innerText = "SIMULACIÓN EN PROGRESO...";
         
         setTimeout(() => {
-            showResultModal(result.ok, result.msg, result.report);
+            showResultModal(result.ok, result.msg, result.report, result.suggestion, result.equation);
             state.simulating = false;
         }, 2500);
     }
 
-    function showResultModal(isSuccess, msg, reportText) {
+    function showResultModal(isSuccess, msg, reportText, suggestionText, equationText) {
         const modal = document.getElementById('result-modal');
         const icon = document.getElementById('result-icon');
         const title = document.getElementById('result-title');
+        const suggestionDiv = document.getElementById('result-suggestion');
+        const equationDiv = document.getElementById('result-equation');
         
         document.getElementById('result-msg').innerText = msg;
         document.getElementById('calc-report').innerText = reportText;
         
+        if (equationText && !isSuccess) {
+            equationDiv.innerText = equationText;
+            equationDiv.classList.remove('hidden');
+        } else {
+            equationDiv.classList.add('hidden');
+        }
+
+        if (suggestionText && !isSuccess) {
+            suggestionDiv.innerText = suggestionText;
+            suggestionDiv.classList.remove('hidden');
+        } else {
+            suggestionDiv.classList.add('hidden');
+        }
+
         modal.classList.add('active');
         if (isSuccess) {
             icon.className = "fa-solid fa-check-circle text-6xl mb-4 text-emerald-400";
@@ -519,18 +646,20 @@
             else if (state.failType === 'break') rotation = 0;
         } else if (state.step > 0) { rotation = 0; }
 
-        if (state.step >= 4 || state.simulating) {
+        if (state.step >= 5 || state.simulating) {
             ctx.save();
             ctx.translate(-150, 0);
             
-            ctx.fillStyle = state.selections.trans === 'renold_16b' ? '#94a3b8' : (state.selections.trans === 'gates_8mgt' ? '#1e293b' : '#64748b');
+            const transTitle = catalog.transmissions.find(t=>t.id===state.selections.trans)?.title || '';
+            const isChain = transTitle.includes("Cadena");
+            ctx.fillStyle = isChain ? '#94a3b8' : (state.selections.trans === 'custom' ? '#64748b' : '#1e293b');
             ctx.beginPath(); ctx.arc(0, 0, rSize * 0.8, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 4; ctx.stroke();
             
             for(let i=0; i<12; i++) {
                 ctx.save();
                 ctx.rotate(rotation + (i * Math.PI/6));
-                ctx.fillStyle = state.selections.trans === 'gates_8mgt' ? '#334155' : '#475569';
+                ctx.fillStyle = isChain ? '#475569' : '#334155';
                 ctx.fillRect(-10, -rSize*0.8 - 10, 20, 20);
                 ctx.restore();
             }
@@ -562,7 +691,7 @@
         }
         ctx.restore();
 
-        if (state.step >= 3 || state.simulating) {
+        if (state.step >= 4 || state.simulating) {
             ctx.save();
             const bWidth = sSize * 3; const bHeight = sSize * 1.8;
             ctx.fillStyle = '#0284c7'; ctx.globalAlpha = 0.8;
@@ -574,15 +703,21 @@
 
         if (state.simulating) {
             ctx.save();
-            let bottleY = -200 + (state.animTime * 30);
-            if (state.failType === 'slip') bottleY = -rSize - 40 + Math.sin(state.animTime * 10)*10;
-            if (state.failType === 'stall' || state.failType === 'break') bottleY = -rSize - 20;
-            if (bottleY > 300 && state.failType === null) bottleY = -200;
+            let objY = -200 + (state.animTime * 30);
+            if (state.failType === 'slip') objY = -rSize - 40 + Math.sin(state.animTime * 10)*10;
+            if (state.failType === 'stall' || state.failType === 'break') objY = -rSize - 20;
+            if (objY > 300 && state.failType === null) objY = -200;
 
-            ctx.fillStyle = 'rgba(186, 230, 253, 0.6)'; ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+            ctx.fillStyle = 'rgba(251, 146, 60, 0.8)';
+            ctx.strokeStyle = '#ea580c'; ctx.lineWidth = 2;
+            
             let width = 60;
-            if (bottleY > -rSize && bottleY < rSize && state.failType === null) width = 10;
-            ctx.fillRect(-width/2, bottleY, width, 100); ctx.strokeRect(-width/2, bottleY, width, 100);
+            if (objY > -rSize && objY < rSize && state.failType === null) {
+                width = parseFloat(state.gap) * 5; 
+                if (width < 2) width = 2;
+            }
+            
+            ctx.fillRect(-width/2, objY, width, 100); ctx.strokeRect(-width/2, objY, width, 100);
             ctx.restore();
         }
 
